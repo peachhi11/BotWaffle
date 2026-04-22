@@ -198,3 +198,46 @@
     stroke: currentColor;
     fill: currentColor;
 }
+
+/* LM Studio Status in Sidebar */
+.lmstudio-status-item {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #334155;
+}
+
+.lmstudio-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.lmstudio-status .connection-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.lmstudio-status .connection-status-text {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Update text color based on connection status in sidebar */
+.lmstudio-status .connection-indicator.status-connected ~ .connection-status-text {
+    color: #10b981;
+}
+
+.lmstudio-status .connection-indicator.status-disconnected ~ .connection-status-text {
+    color: #ef4444;
+}
+
+.lmstudio-status .connection-indicator.status-unknown ~ .connection-status-text {
+    color: #f59e0b;
+}

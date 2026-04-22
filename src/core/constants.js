@@ -101,7 +101,8 @@ const STORAGE_DIRS = [
     'templates',
     'config',
     'assets',      // Legacy: kept for migration
-    'prompt-waffle'
+    'prompt-waffle',
+    'prompts'      // LM Studio prompt files
 ];
 
 module.exports = {

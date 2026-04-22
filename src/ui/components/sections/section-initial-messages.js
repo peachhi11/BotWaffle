@@ -42,7 +42,17 @@ class SectionInitialMessages extends customElements.get('section-base') {
             <div class="initial-messages-section">
                 <div class="form-group">
                     <div class="initial-messages-header">
-                        <label>Initial Messages</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label>Initial Messages</label>
+                            <button type="button" class="ai-generate-btn" id="generate-messages-btn" title="Generate with AI">
+                                <i data-feather="zap"></i>
+                                Generate with AI
+                            </button>
+                            <button type="button" class="ai-edit-btn" id="edit-messages-btn" title="Edit with AI">
+                                <i data-feather="edit-3"></i>
+                                Edit with AI
+                            </button>
+                        </div>
                         <button type="button" id="add-message-btn" class="secondary-btn small">+ Add Message</button>
                     </div>
                     <div class="messages-tabs" id="messages-tabs">
@@ -78,6 +88,7 @@ class SectionInitialMessages extends customElements.get('section-base') {
         const tabsContainer = this.querySelector('#messages-tabs');
         const panels = this.querySelectorAll('.message-panel');
         const addBtn = this.querySelector('#add-message-btn');
+        const generateBtn = this.querySelector('#generate-messages-btn');
 
         // Use event delegation for tabs (handles dynamically created tabs)
         if (tabsContainer) {
@@ -124,6 +135,22 @@ class SectionInitialMessages extends customElements.get('section-base') {
             addBtn.addEventListener('click', () => {
                 this._addMessage();
             });
+        }
+
+        // Generate button
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.openGenerationModal(false));
+        }
+
+        // Edit button
+        const editBtn = this.querySelector('#edit-messages-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => this.openGenerationModal(true));
+        }
+
+        // Replace feather icons
+        if (window.feather) {
+            window.feather.replace();
         }
 
         // Save content on input and update token counts
@@ -333,6 +360,93 @@ class SectionInitialMessages extends customElements.get('section-base') {
         });
 
         return messages.length > 0 ? messages : [];
+    }
+
+    getActiveTabIndex() {
+        const activeTab = this.querySelector('.message-tab.active');
+        if (activeTab) {
+            return parseInt(activeTab.dataset.index, 10);
+        }
+        return 0;
+    }
+
+    openGenerationModal(isEdit = false) {
+        const editor = this.closest('chatbot-editor');
+        if (!editor) return;
+
+        const characterData = editor.getCharacterData();
+        const activeIndex = this.getActiveTabIndex();
+        
+        // Get current content if editing
+        let currentContent = '';
+        if (isEdit) {
+            const activePanel = this.querySelector(`.message-panel[data-index="${activeIndex}"]`);
+            if (activePanel) {
+                const textarea = activePanel.querySelector('.message-textarea');
+                currentContent = textarea ? textarea.value : '';
+            }
+            
+            if (!currentContent.trim()) {
+                alert('No content to edit. Please add some content first or use Generate instead.');
+                return;
+            }
+        }
+        
+        // Get or create modal
+        let modal = document.querySelector('ai-generation-modal');
+        if (!modal) {
+            modal = document.createElement('ai-generation-modal');
+            document.body.appendChild(modal);
+        }
+
+        modal.open({
+            type: 'initialMessages',
+            characterData: characterData,
+            additionalInput: { count: 1, activeTabIndex: activeIndex },
+            isEdit: isEdit,
+            currentContent: currentContent,
+            onInsert: (content) => {
+                // Insert into the currently active message tab
+                const activeIndex = this.getActiveTabIndex();
+                if (this._messages[activeIndex]) {
+                    this._messages[activeIndex].text = content.trim();
+                    
+                    // Update the textarea in the active panel
+                    const activePanel = this.querySelector(`.message-panel[data-index="${activeIndex}"]`);
+                    if (activePanel) {
+                        const textarea = activePanel.querySelector('.message-textarea');
+                        if (textarea) {
+                            textarea.value = content.trim();
+                            textarea.dispatchEvent(new Event('input'));
+                        }
+                    }
+                    
+                    this._updateMessageTokenCount(activeIndex);
+                    this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+                }
+            },
+            onAppend: (content) => {
+                // Append to the currently active message tab
+                const activeIndex = this.getActiveTabIndex();
+                if (this._messages[activeIndex]) {
+                    const currentText = this._messages[activeIndex].text || '';
+                    this._messages[activeIndex].text = currentText ? `${currentText}\n\n${content.trim()}` : content.trim();
+                    
+                    // Update the textarea in the active panel
+                    const activePanel = this.querySelector(`.message-panel[data-index="${activeIndex}"]`);
+                    if (activePanel) {
+                        const textarea = activePanel.querySelector('.message-textarea');
+                        if (textarea) {
+                            textarea.value = this._messages[activeIndex].text;
+                            textarea.dispatchEvent(new Event('input'));
+                        }
+                    }
+                    
+                    this._updateMessageTokenCount(activeIndex);
+                    this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+                }
+            }
+        });
     }
 }
 

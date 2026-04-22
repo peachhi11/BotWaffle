@@ -1,7 +1,7 @@
 {
   "name": "botwaffle",
   "productName": "BotWaffle",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "A comprehensive desktop application for creating, storing, tracking, and managing AI chatbots and their associated prompts.",
   "main": "main.js",
   "scripts": {

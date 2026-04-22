@@ -423,6 +423,20 @@ async function exportBotWaffleData() {
             }
         }
 
+        // Export custom AI prompts (data/prompts/*.txt in category folders)
+        const promptsPath = getDataPath('prompts');
+        if (fsSync.existsSync(promptsPath)) {
+            addDirectoryToZip(zip, promptsPath, 'prompts');
+            info('[Export] Added prompts folder (custom AI prompts)');
+        }
+
+        // Export LM Studio config (lmstudio.json with prompt settings)
+        const configPath = getDataPath('config');
+        if (fsSync.existsSync(configPath)) {
+            addDirectoryToZip(zip, configPath, 'config');
+            info('[Export] Added config folder (LM Studio settings)');
+        }
+
         // Create export manifest
         const manifest = {
             version: '2.0', // New version for character folder structure
@@ -444,6 +458,12 @@ async function exportBotWaffleData() {
             } catch {
                 // Skip non-existent folders
             }
+        }
+        if (fsSync.existsSync(promptsPath)) {
+            manifest.folders.push('prompts');
+        }
+        if (fsSync.existsSync(configPath)) {
+            manifest.folders.push('config');
         }
 
         zip.addFile('export_manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)));
@@ -587,7 +607,7 @@ async function importBotWaffleData() {
         const backupDir = path.join(dataDir, 'backups', 'backup_before_import_' + Date.now());
         try {
             await fs.mkdir(backupDir, { recursive: true });
-            const foldersToBackup = ['characters', 'conversations', 'templates'];
+            const foldersToBackup = ['characters', 'conversations', 'templates', 'prompts', 'config'];
             for (const folder of foldersToBackup) {
                 const folderPath = getDataPath(folder);
                 try {

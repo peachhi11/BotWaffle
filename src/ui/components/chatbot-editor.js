@@ -105,6 +105,12 @@ class ChatbotEditor extends HTMLElement {
                 <div class="header-left" style="display: flex; align-items: center; gap: 20px;">
                     <h2>${isEdit ? 'Edit Chatbot' : 'Create New Chatbot'}</h2>
                     <button id="save-btn" class="primary-btn">Save</button>
+                    ${!isEdit ? `
+                        <button class="ai-generate-btn" id="generate-full-character-btn" title="Generate Full Character with AI">
+                            <i data-feather="zap"></i>
+                            Generate Full Character with AI
+                        </button>
+                    ` : ''}
                 </div>
                 <div class="header-center" id="bot-display-name">
                     ${isEdit ? `<span class="bot-name-display">${displayName || 'Unnamed Bot'}</span>` : ''}
@@ -548,6 +554,18 @@ class ChatbotEditor extends HTMLElement {
                 window.EditorModals.showSaveTemplateModal(this);
             };
             addStoredListener(saveTemplateBtn, 'click', saveTemplateHandler);
+        }
+
+        // Generate Full Character Logic
+        const generateFullCharBtn = this.querySelector('#generate-full-character-btn');
+        if (generateFullCharBtn) {
+            const generateHandler = () => this.openFullCharacterGenerator();
+            addStoredListener(generateFullCharBtn, 'click', generateHandler);
+        }
+
+        // Replace feather icons
+        if (window.feather) {
+            window.feather.replace();
         }
 
         // Re-initialize feather icons for new buttons (like export-character-btn)
@@ -1115,11 +1133,11 @@ class ChatbotEditor extends HTMLElement {
                 exportData.initialMessages = Array.isArray(data) ? data : [];
             }
 
-            // Collect example dialogs
+            // Collect example dialogs (now a string, not array)
             const exampleDialogsSection = otherSectionsAfterContainer?.querySelector('section-example-dialogs');
             if (exampleDialogsSection && typeof exampleDialogsSection.getData === 'function') {
                 const data = exampleDialogsSection.getData();
-                exportData.exampleDialogs = Array.isArray(data) ? data : [];
+                exportData.exampleDialogs = typeof data === 'string' ? data : '';
             }
 
             // Step 2: Get saved bot data for profile and other metadata
@@ -1214,6 +1232,287 @@ class ChatbotEditor extends HTMLElement {
             // Final error handler - show user-friendly message
             const errorMessage = error?.message || 'Unknown error occurred';
             alert(`Export failed: ${errorMessage}\n\nPlease try again or contact support if the issue persists.`);
+        }
+    }
+
+    getCharacterData() {
+        // Collect data from all sections similar to save() but without validation
+        const otherSectionsContainer = this.querySelector('#other-sections-container');
+        const otherSectionsAfterContainer = this.querySelector('#other-sections-after-container');
+        
+        const profileSection = otherSectionsContainer ? otherSectionsContainer.querySelector('section-profile') : null;
+        const afterSections = otherSectionsAfterContainer ? otherSectionsAfterContainer.querySelectorAll('section-personality, section-scenario, section-initial-messages, section-example-dialogs') : [];
+        
+        const sections = profileSection ? [profileSection, ...afterSections] : afterSections;
+        
+        let characterData = {
+            ...this._data,
+            profile: {},
+            metadata: this._data?.metadata || {}
+        };
+
+        // Collect data from sections
+        sections.forEach(section => {
+            if (typeof section.getData === 'function') {
+                const sectionData = section.getData();
+                const tagName = section.tagName.toLowerCase();
+
+                if (tagName === 'section-profile') {
+                    characterData.profile = {
+                        name: sectionData.name,
+                        displayName: sectionData.displayName,
+                        category: sectionData.category,
+                        description: sectionData.description,
+                        tags: sectionData.tags,
+                        image: sectionData.image,
+                        images: sectionData.images
+                    };
+                } else if (tagName === 'section-personality') {
+                    characterData.personality = sectionData;
+                } else if (tagName === 'section-scenario') {
+                    if (sectionData && typeof sectionData === 'object') {
+                        characterData.scenario = { scenario: sectionData.scenario || sectionData.text || '' };
+                    } else {
+                        characterData.scenario = { scenario: sectionData || '' };
+                    }
+                } else if (tagName === 'section-initial-messages') {
+                    characterData.initialMessages = sectionData;
+                } else if (tagName === 'section-example-dialogs') {
+                    characterData.exampleDialogs = sectionData;
+                }
+            }
+        });
+
+        return characterData;
+    }
+
+    openFullCharacterGenerator() {
+        let generator = document.querySelector('full-character-generator');
+        if (!generator) {
+            generator = document.createElement('full-character-generator');
+            document.body.appendChild(generator);
+        }
+
+        generator.open({
+            onComplete: (generatedData) => {
+                this.populateGeneratedCharacter(generatedData);
+                this._isDirty = true;
+            }
+        });
+    }
+
+    populateGeneratedCharacter(data) {
+        // Populate Character Card Info (top section)
+        const profileSection = this.querySelector('section-profile');
+        if (profileSection) {
+            // Populate from characterCard data
+            if (data.characterCard) {
+                // Tags
+                if (data.characterCard.tags) {
+                    const tagsInput = profileSection.querySelector('input[name="tags"]');
+                    if (tagsInput) {
+                        tagsInput.value = data.characterCard.tags;
+                        tagsInput.dispatchEvent(new Event('input'));
+                    }
+                }
+
+                // Internal Name
+                if (data.characterCard.internalName) {
+                    const internalNameInput = profileSection.querySelector('input[name="name"]');
+                    if (internalNameInput) {
+                        internalNameInput.value = data.characterCard.internalName;
+                        internalNameInput.dispatchEvent(new Event('input'));
+                    }
+                }
+
+                // Display Name
+                if (data.characterCard.displayName) {
+                    const displayNameInput = profileSection.querySelector('input[name="displayName"]');
+                    if (displayNameInput) {
+                        displayNameInput.value = data.characterCard.displayName;
+                        displayNameInput.dispatchEvent(new Event('input'));
+                    }
+                }
+
+                // Description
+                if (data.characterCard.description) {
+                    const descriptionInput = profileSection.querySelector('textarea[name="description"]');
+                    if (descriptionInput) {
+                        descriptionInput.value = data.characterCard.description;
+                        descriptionInput.dispatchEvent(new Event('input'));
+                    }
+                }
+            }
+
+            // Also populate from profile data (for compatibility with old format)
+            if (data.profile) {
+                if (data.profile.displayName) {
+                    const nameInput = profileSection.querySelector('input[name="displayName"]');
+                    if (nameInput && !nameInput.value) {
+                        nameInput.value = data.profile.displayName;
+                        nameInput.dispatchEvent(new Event('input'));
+                    }
+                }
+                if (data.profile.description) {
+                    const descInput = profileSection.querySelector('textarea[name="description"]');
+                    if (descInput && !descInput.value) {
+                        descInput.value = data.profile.description;
+                        descInput.dispatchEvent(new Event('input'));
+                    }
+                }
+            }
+        }
+
+        // Populate Personality section
+        const personalitySection = this.querySelector('section-personality');
+        if (personalitySection && data.personality) {
+            const textarea = personalitySection.querySelector('#personality-textarea');
+            if (textarea) {
+                textarea.value = data.personality;
+                textarea.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // Populate Scenario section
+        const scenarioSection = this.querySelector('section-scenario');
+        if (scenarioSection && data.scenario) {
+            const textarea = scenarioSection.querySelector('#scenario-text');
+            if (textarea) {
+                textarea.value = data.scenario;
+                textarea.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // Populate Initial Messages
+        if (data.initialMessages && data.initialMessages.length > 0) {
+            const messagesSection = this.querySelector('section-initial-messages');
+            if (messagesSection) {
+                messagesSection._messages = data.initialMessages;
+                messagesSection.renderContent();
+            }
+        }
+
+        // Populate Example Dialogs (now a string, not array)
+        if (data.exampleDialogs) {
+            const dialogsSection = this.querySelector('section-example-dialogs');
+            if (dialogsSection) {
+                const textarea = dialogsSection.querySelector('#example-dialogs-text');
+                if (textarea) {
+                    textarea.value = typeof data.exampleDialogs === 'string' ? data.exampleDialogs : '';
+                    textarea.dispatchEvent(new Event('input'));
+                }
+            }
+        }
+
+        this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+    }
+
+    parseAndPopulateFullCharacter(content) {
+        // Parse the generated content into sections
+        const sections = {
+            personality: '',
+            scenario: '',
+            initialMessages: [],
+            exampleDialogs: []
+        };
+
+        // Try to extract sections from the content
+        const lines = content.split('\n');
+        let currentSection = null;
+        let currentContent = [];
+
+        for (const line of lines) {
+            const lower = line.toLowerCase().trim();
+            
+            if (lower.includes('personality:') || lower.startsWith('## personality')) {
+                if (currentSection) {
+                    this.finalizeSection(sections, currentSection, currentContent);
+                }
+                currentSection = 'personality';
+                currentContent = [];
+            } else if (lower.includes('scenario:') || lower.startsWith('## scenario')) {
+                if (currentSection) {
+                    this.finalizeSection(sections, currentSection, currentContent);
+                }
+                currentSection = 'scenario';
+                currentContent = [];
+            } else if (lower.includes('initial message') || lower.startsWith('## initial')) {
+                if (currentSection) {
+                    this.finalizeSection(sections, currentSection, currentContent);
+                }
+                currentSection = 'initialMessages';
+                currentContent = [];
+            } else if (lower.includes('example dialog') || lower.startsWith('## example')) {
+                if (currentSection) {
+                    this.finalizeSection(sections, currentSection, currentContent);
+                }
+                currentSection = 'exampleDialogs';
+                currentContent = [];
+            } else if (line.trim()) {
+                currentContent.push(line);
+            }
+        }
+
+        // Finalize last section
+        if (currentSection) {
+            this.finalizeSection(sections, currentSection, currentContent);
+        }
+
+        // Populate the sections
+        const personalitySection = this.querySelector('section-personality');
+        if (personalitySection && sections.personality) {
+            const textarea = personalitySection.querySelector('#personality-textarea');
+            if (textarea) {
+                textarea.value = sections.personality;
+                textarea.dispatchEvent(new Event('input'));
+            }
+        }
+
+        const scenarioSection = this.querySelector('section-scenario');
+        if (scenarioSection && sections.scenario) {
+            const textarea = scenarioSection.querySelector('#scenario-text');
+            if (textarea) {
+                textarea.value = sections.scenario;
+                textarea.dispatchEvent(new Event('input'));
+            }
+        }
+
+        // For messages and dialogs
+        if (sections.initialMessages.length > 0) {
+            const messagesSection = this.querySelector('section-initial-messages');
+            if (messagesSection) {
+                messagesSection._messages = sections.initialMessages.map(text => ({
+                    id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    text: text
+                }));
+                messagesSection.renderContent();
+            }
+        }
+
+        if (sections.exampleDialogs.length > 0) {
+            const dialogsSection = this.querySelector('section-example-dialogs');
+            if (dialogsSection) {
+                dialogsSection._dialogs = sections.exampleDialogs.map(text => ({
+                    id: 'dialog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    text: text
+                }));
+                dialogsSection.renderContent();
+            }
+        }
+
+        this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+    }
+
+    finalizeSection(sections, sectionName, content) {
+        const text = content.join('\n').trim();
+        if (!text) return;
+
+        if (sectionName === 'personality' || sectionName === 'scenario') {
+            sections[sectionName] = text;
+        } else if (sectionName === 'initialMessages' || sectionName === 'exampleDialogs') {
+            // Split by blank lines for multiple messages/dialogs
+            const items = text.split(/\n\n+/).filter(t => t.trim());
+            sections[sectionName] = items;
         }
     }
 }

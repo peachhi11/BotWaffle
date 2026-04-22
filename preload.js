@@ -44,5 +44,22 @@ contextBridge.exposeInMainWorld('api', {
     comfyui: {
         getFolder: () => ipcRenderer.invoke('get-comfyui-folder'),
         savePrompt: (prompt, folderPath, filename) => ipcRenderer.invoke('save-prompt-to-file', prompt, folderPath, filename)
+    },
+    lmstudio: {
+        getConfig: () => ipcRenderer.invoke('lmstudio:get-config'),
+        saveConfig: (config) => ipcRenderer.invoke('lmstudio:save-config', config),
+        updatePrompt: (type, prompt) => ipcRenderer.invoke('lmstudio:update-prompt', type, prompt),
+        resetPrompt: (type) => ipcRenderer.invoke('lmstudio:reset-prompt', type),
+        testConnection: () => ipcRenderer.invoke('lmstudio:test-connection'),
+        listModels: () => ipcRenderer.invoke('lmstudio:list-models'),
+        generate: (type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent) => 
+            ipcRenderer.invoke('lmstudio:generate', type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent),
+        cancel: () => ipcRenderer.invoke('lmstudio:cancel'),
+        reloadPrompts: () => ipcRenderer.invoke('lmstudio:reload-prompts'),
+        savePromptToFile: (type, content) => ipcRenderer.invoke('lmstudio:save-prompt-to-file', type, content),
+        listPromptFiles: (category) => ipcRenderer.invoke('lmstudio:list-prompt-files', category),
+        loadPromptFromFile: (category, filename) => ipcRenderer.invoke('lmstudio:load-prompt-from-file', category, filename),
+        getPromptsPath: () => ipcRenderer.invoke('lmstudio:get-prompts-path'),
+        openPromptsFolder: () => ipcRenderer.invoke('lmstudio:open-prompts-folder')
     }
 });

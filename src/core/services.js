@@ -7,6 +7,7 @@ const { container } = require('./container');
 const ChatbotManager = require('./chatbot-manager');
 const TemplateManager = require('./template-manager');
 const AssetManager = require('./asset-manager');
+const LMStudioService = require('./lmstudio-service');
 
 /**
  * Initializes the service container with all managers
@@ -17,6 +18,7 @@ function initializeServices() {
     container.register('chatbotManager', () => new ChatbotManager(), { singleton: true });
     container.register('templateManager', () => new TemplateManager(), { singleton: true });
     container.register('assetManager', () => new AssetManager(), { singleton: true });
+    container.register('lmstudioService', () => new LMStudioService(), { singleton: true });
 }
 
 /**

@@ -120,6 +120,10 @@ class BotScriptsView extends HTMLElement {
                             <i data-feather="folder"></i>
                             Open Location
                         </button>
+                        <button class="ai-generate-btn" id="generate-script-btn" title="Generate with AI">
+                            <i data-feather="zap"></i>
+                            Generate Script
+                        </button>
                         <button id="add-script-btn" class="primary-btn">
                             <i data-feather="plus"></i>
                             Add Script
@@ -208,8 +212,13 @@ class BotScriptsView extends HTMLElement {
 
         // Add script button
         const addBtn = this.querySelector('#add-script-btn');
+        const generateBtn = this.querySelector('#generate-script-btn');
         if (addBtn) {
             addBtn.addEventListener('click', () => this.handleAddScript());
+        }
+
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.openGenerationModal());
         }
 
         // Search input
@@ -695,6 +704,35 @@ class BotScriptsView extends HTMLElement {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
+    }
+
+    openGenerationModal() {
+        // Get or create modal
+        let modal = document.querySelector('ai-generation-modal');
+        if (!modal) {
+            modal = document.createElement('ai-generation-modal');
+            document.body.appendChild(modal);
+        }
+
+        modal.open({
+            type: 'scripts',
+            characterData: this.botData,
+            additionalInput: { scriptType: 'Lorebook', description: '' },
+            onInsert: async (content) => {
+                // Add the generated script
+                const scriptName = await this.showScriptNameModal();
+                if (scriptName) {
+                    await this.saveScript(scriptName, content);
+                }
+            },
+            onAppend: async (content) => {
+                // Same as insert for scripts
+                const scriptName = await this.showScriptNameModal();
+                if (scriptName) {
+                    await this.saveScript(scriptName, content);
+                }
+            }
+        });
     }
 }
 

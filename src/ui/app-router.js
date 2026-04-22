@@ -279,6 +279,11 @@
         showList();
     });
 
+    document.addEventListener('navigate-settings', () => {
+        if (checkUnsavedChanges()) return;
+        container.innerHTML = '<lmstudio-settings></lmstudio-settings>';
+    });
+
     // Listen for bot-specific view navigation
     document.addEventListener('navigate-bot-view', async (e) => {
         if (checkUnsavedChanges()) return;

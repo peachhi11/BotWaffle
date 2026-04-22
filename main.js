@@ -132,6 +132,12 @@ app.whenReady().then(() => {
     const chatbotManager = getService('chatbotManager');
     const templateManager = getService('templateManager');
     const assetManager = getService('assetManager');
+    const lmstudioService = getService('lmstudioService');
+
+    // Initialize LM Studio service
+    lmstudioService.initialize().catch(err => {
+        logError('[LMStudio] Failed to initialize service', err);
+    });
 
     // IPC Handlers with consistent error handling
     // Chatbot Handlers
@@ -188,6 +194,76 @@ app.whenReady().then(() => {
     registerIpcHandler(ipcMain, 'template:save', (_, name, layout) => templateManager.saveTemplate(name, layout), { rethrow: true });
     registerIpcHandler(ipcMain, 'template:get', (_, id) => templateManager.getTemplate(id), { errorReturn: null });
     registerIpcHandler(ipcMain, 'template:delete', (_, id) => templateManager.deleteTemplate(id), { rethrow: true });
+
+    // LM Studio Handlers
+    registerIpcHandler(ipcMain, 'lmstudio:get-config', async () => {
+        return await lmstudioService.configManager.get();
+    }, { errorReturn: null });
+
+    registerIpcHandler(ipcMain, 'lmstudio:save-config', async (_, config) => {
+        return await lmstudioService.configManager.save(config);
+    }, { rethrow: true });
+
+    registerIpcHandler(ipcMain, 'lmstudio:update-prompt', async (_, type, prompt) => {
+        return await lmstudioService.configManager.updatePrompt(type, prompt);
+    }, { rethrow: true });
+
+    registerIpcHandler(ipcMain, 'lmstudio:reset-prompt', async (_, type) => {
+        return await lmstudioService.configManager.resetPrompt(type);
+    }, { rethrow: true });
+
+    registerIpcHandler(ipcMain, 'lmstudio:test-connection', async () => {
+        return await lmstudioService.testConnection();
+    }, { errorReturn: { success: false, message: 'Connection test failed' } });
+
+    registerIpcHandler(ipcMain, 'lmstudio:list-models', async () => {
+        return await lmstudioService.listModels();
+    }, { errorReturn: [] });
+
+    registerIpcHandler(ipcMain, 'lmstudio:generate', async (_, type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent) => {
+        return await lmstudioService.generate(type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent);
+    }, { rethrow: true });
+
+    registerIpcHandler(ipcMain, 'lmstudio:cancel', () => {
+        lmstudioService.cancelGeneration();
+        return true;
+    }, { errorReturn: false });
+
+    // Prompt file operations
+    registerIpcHandler(ipcMain, 'lmstudio:reload-prompts', async () => {
+        return await lmstudioService.configManager.promptManager.reload();
+    }, { errorReturn: {} });
+
+    registerIpcHandler(ipcMain, 'lmstudio:save-prompt-to-file', async (_, type, content) => {
+        return await lmstudioService.configManager.promptManager.savePrompt(type, content);
+    }, { rethrow: true });
+
+    registerIpcHandler(ipcMain, 'lmstudio:list-prompt-files', async (_, category) => {
+        if (!category || typeof category !== 'string') return [];
+        return await lmstudioService.configManager.promptManager.listPrompts(category);
+    }, { errorReturn: [] });
+
+    registerIpcHandler(ipcMain, 'lmstudio:load-prompt-from-file', async (_, category, filename) => {
+        return await lmstudioService.configManager.promptManager.loadPromptFromFile(category, filename);
+    }, { errorReturn: null });
+
+    registerIpcHandler(ipcMain, 'lmstudio:get-prompts-path', async () => {
+        const { getDataPath } = require('./src/core/storage');
+        return getDataPath('prompts');
+    }, { errorReturn: null });
+
+    registerIpcHandler(ipcMain, 'lmstudio:open-prompts-folder', async () => {
+        const { getDataPath } = require('./src/core/storage');
+        const { shell } = require('electron');
+        const path = require('path');
+        const fs = require('fs');
+        const promptsPath = getDataPath('prompts');
+        if (!fs.existsSync(promptsPath)) {
+            fs.mkdirSync(promptsPath, { recursive: true });
+        }
+        const result = await shell.openPath(promptsPath);
+        return { success: result === '', error: result || null };
+    }, { errorReturn: { success: false, error: 'Failed to open folder' } });
 
     // Asset Handlers
 

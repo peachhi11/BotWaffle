@@ -40,7 +40,17 @@ class SectionPersonality extends customElements.get('section-base') {
 
         body.innerHTML = `
             <div class="form-group">
-                <label>Personality</label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <span>Personality</span>
+                    <button class="ai-generate-btn" id="generate-personality-btn" title="Generate with AI">
+                        <i data-feather="zap"></i>
+                        Generate with AI
+                    </button>
+                    <button class="ai-edit-btn" id="edit-personality-btn" title="Edit with AI">
+                        <i data-feather="edit-3"></i>
+                        Edit with AI
+                    </button>
+                </label>
                 <textarea id="personality-textarea" class="input-field" rows="10" 
                           placeholder="Describe the character's personality, traits, behavior, and mannerisms...">${escapeHtml(personalityText)}</textarea>
                 <div class="field-hint">Enter the character's personality description</div>
@@ -70,6 +80,81 @@ class SectionPersonality extends customElements.get('section-base') {
                 setTimeout(autoResize, 0);
             });
         }
+
+        // Set up AI generation button
+        const generateBtn = body.querySelector('#generate-personality-btn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.openGenerationModal(false));
+        }
+
+        // Set up AI edit button
+        const editBtn = body.querySelector('#edit-personality-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => this.openGenerationModal(true));
+        }
+
+        // Replace feather icons
+        if (window.feather) {
+            window.feather.replace();
+        }
+    }
+
+    openGenerationModal(isEdit = false) {
+        console.log('[Personality] Opening generation modal, isEdit:', isEdit);
+        const editor = this.closest('chatbot-editor');
+        if (!editor) {
+            console.error('[Personality] No editor found');
+            return;
+        }
+
+        const characterData = editor.getCharacterData();
+        console.log('[Personality] Character data:', characterData);
+        
+        // Get current content if editing
+        let currentContent = '';
+        if (isEdit) {
+            const textarea = this.querySelector('#personality-textarea');
+            currentContent = textarea ? textarea.value : '';
+            
+            if (!currentContent.trim()) {
+                alert('No content to edit. Please add some content first or use Generate instead.');
+                return;
+            }
+        }
+        
+        // Get or create modal
+        let modal = document.querySelector('ai-generation-modal');
+        if (!modal) {
+            console.log('[Personality] Creating new modal');
+            modal = document.createElement('ai-generation-modal');
+            document.body.appendChild(modal);
+        } else {
+            console.log('[Personality] Using existing modal');
+        }
+
+        console.log('[Personality] Opening modal with type: personality');
+        modal.open({
+            type: 'personality',
+            characterData: characterData,
+            isEdit: isEdit,
+            currentContent: currentContent,
+            onInsert: (content) => {
+                const textarea = this.querySelector('#personality-textarea');
+                if (textarea) {
+                    textarea.value = content;
+                    textarea.dispatchEvent(new Event('input'));
+                    this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+                }
+            },
+            onAppend: (content) => {
+                const textarea = this.querySelector('#personality-textarea');
+                if (textarea) {
+                    textarea.value = textarea.value ? `${textarea.value}\n\n${content}` : content;
+                    textarea.dispatchEvent(new Event('input'));
+                    this.dispatchEvent(new CustomEvent('section-change', { bubbles: true }));
+                }
+            }
+        });
     }
 
     getData() {

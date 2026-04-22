@@ -2,18 +2,6 @@ class SectionExampleDialogs extends customElements.get('section-base') {
     constructor() {
         super();
         this._title = 'Example Dialogs';
-        this._dialogs = [];
-    }
-
-    set dialogs(value) {
-        this._dialogs = Array.isArray(value) ? value : [];
-        if (this.isConnected && this.querySelector('.section-body')) {
-            this.renderContent();
-        }
-    }
-
-    get dialogs() {
-        return this._dialogs || [];
     }
 
     connectedCallback() {
@@ -24,57 +12,50 @@ class SectionExampleDialogs extends customElements.get('section-base') {
 
     renderContent() {
         const body = this.querySelector('.section-body');
-        const dialogsData = this._data.exampleDialogs || this._data.dialogs || [];
-
-        const normalizedDialogs = dialogsData.map((dialog) => {
-            if (typeof dialog === 'string') {
-                return { id: this._generateId(), text: dialog };
-            }
-
-            if (dialog && typeof dialog === 'object') {
-                const textValue = typeof dialog.text === 'string'
-                    ? dialog.text
-                    : [dialog.user ? `User: ${dialog.user}` : '', dialog.assistant ? `Assistant: ${dialog.assistant}` : '']
-                        .filter(Boolean)
-                        .join('\n');
-                return { id: dialog.id || this._generateId(), text: textValue || '' };
-            }
-
-            return { id: this._generateId(), text: '' };
-        });
-
-        // Initialize with one empty dialog if empty
-        if (normalizedDialogs.length === 0) {
-            normalizedDialogs.push({ id: this._generateId(), text: '' });
+        
+        // Get the dialog text - handle both old array format and new string format
+        let dialogText = '';
+        const dialogsData = this._data.exampleDialogs || this._data.dialogs || '';
+        
+        if (typeof dialogsData === 'string') {
+            dialogText = dialogsData;
+        } else if (Array.isArray(dialogsData) && dialogsData.length > 0) {
+            // Convert old array format to single text
+            dialogText = dialogsData.map(d => {
+                if (typeof d === 'string') return d;
+                if (d && typeof d === 'object' && d.text) return d.text;
+                return '';
+            }).filter(Boolean).join('\n\n');
         }
-
-        this._dialogs = normalizedDialogs;
 
         const escapeHtml = window.SecurityUtils.escapeHtml;
         
         body.innerHTML = `
             <div class="example-dialogs-section">
                 <div class="form-group">
-                    <div class="dialogs-header">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                         <label>Example Dialogs</label>
-                        <button type="button" id="add-dialog-btn" class="secondary-btn small">+ Add Dialog</button>
+                        <button type="button" class="ai-generate-btn" id="generate-dialogs-btn" title="Generate with AI">
+                            <i data-feather="zap"></i>
+                            Generate with AI
+                        </button>
+                        <button type="button" class="ai-edit-btn" id="edit-dialogs-btn" title="Edit with AI">
+                            <i data-feather="edit-3"></i>
+                            Edit with AI
+                        </button>
                     </div>
-                    <div class="dialogs-list" id="dialogs-list">
-                        ${this._dialogs.map((dialog, index) => `
-                            <div class="dialog-item" data-index="${index}">
-                                <div class="dialog-header">
-                                    <span class="dialog-number">Dialog ${index + 1}</span>
-                                    ${this._dialogs.length > 1 ? `<button type="button" class="icon-btn small remove-dialog-btn" data-index="${index}" title="Remove">×</button>` : ''}
-                                </div>
-                                <div class="dialog-content">
-                                    <div class="form-group">
-                                        <label>Example Dialog</label>
-                                        <textarea class="input-field dialog-text" rows="6" placeholder="Enter the example dialog...">${escapeHtml(dialog.text || '')}</textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <textarea 
+                        id="example-dialogs-text" 
+                        class="input-field" 
+                        rows="10" 
+                        placeholder="Enter example conversation exchanges between the user and character. Format as:
+
+User: Hello!
+Character: Hi there! How can I help you today?
+
+User: What's your favorite thing to do?
+Character: I love reading books and discussing them with people!">${escapeHtml(dialogText)}</textarea>
+                    <div class="field-hint">Write example conversation exchanges to demonstrate the character's speaking style and personality</div>
                 </div>
             </div>
         `;
@@ -82,103 +63,97 @@ class SectionExampleDialogs extends customElements.get('section-base') {
         this._setupListeners();
     }
 
-    _generateId() {
-        return 'dialog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
     _setupListeners() {
-        const addBtn = this.querySelector('#add-dialog-btn');
-        const removeBtns = this.querySelectorAll('.remove-dialog-btn');
+        const textarea = this.querySelector('#example-dialogs-text');
+        const generateBtn = this.querySelector('#generate-dialogs-btn');
+        const editBtn = this.querySelector('#edit-dialogs-btn');
 
-        // Add new dialog
-        if (addBtn) {
-            addBtn.addEventListener('click', () => {
-                this._addDialog();
+        // Auto-resize textarea
+        if (textarea) {
+            const autoResize = () => {
+                textarea.style.height = 'auto';
+                textarea.style.height = Math.max(textarea.scrollHeight, 200) + 'px';
+            };
+            
+            autoResize();
+            
+            textarea.addEventListener('input', () => {
+                autoResize();
+                this.dispatchEvent(new CustomEvent('section-change', { 
+                    bubbles: true,
+                    detail: { section: 'exampleDialogs' }
+                }));
             });
         }
 
-        // Remove dialog
-        removeBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(btn.getAttribute('data-index'), 10);
-                this._removeDialog(index);
-            });
-        });
+        // Generate button
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => this.openGenerationModal(false));
+        }
 
-        // Save content on input
-        const dialogItems = this.querySelectorAll('.dialog-item');
-        dialogItems.forEach(item => {
-            const index = parseInt(item.getAttribute('data-index'), 10);
-            const dialogTextarea = item.querySelector('.dialog-text');
-            
-            if (dialogTextarea) {
-                // Auto-resize function
-                const autoResize = () => {
-                    dialogTextarea.style.height = 'auto';
-                    dialogTextarea.style.height = dialogTextarea.scrollHeight + 'px';
-                };
-                
-                // Set initial height
-                autoResize();
-                
-                // Prevent header click from interfering
-                dialogTextarea.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
-                dialogTextarea.addEventListener('focus', (e) => {
-                    e.stopPropagation();
-                });
-                dialogTextarea.addEventListener('input', () => {
-                    autoResize();
-                    if (this._dialogs[index]) {
-                        this._dialogs[index].text = dialogTextarea.value;
-                    }
-                });
-                
-                // Resize on paste
-                dialogTextarea.addEventListener('paste', () => {
-                    setTimeout(autoResize, 0);
-                });
-            }
-        });
+        // Edit button
+        if (editBtn) {
+            editBtn.addEventListener('click', () => this.openGenerationModal(true));
+        }
+
+        // Replace feather icons
+        if (window.feather) {
+            window.feather.replace();
+        }
     }
 
-    _addDialog() {
-        const newDialog = { id: this._generateId(), text: '' };
-        this._dialogs.push(newDialog);
-        this.renderContent();
-    }
-
-    _removeDialog(index) {
-        if (this._dialogs.length <= 1) {
-            // Don't allow removing the last dialog
+    openGenerationModal(isEdit = false) {
+        console.log('[Example Dialogs] Opening generation modal');
+        
+        const editor = document.querySelector('chatbot-editor');
+        if (!editor) {
+            console.error('[Example Dialogs] Editor not found');
             return;
         }
-        
-        this._dialogs.splice(index, 1);
-        this.renderContent();
+
+        const characterData = editor.getCharacterData();
+        console.log('[Example Dialogs] Character data:', characterData);
+
+        let modal = document.querySelector('ai-generation-modal');
+        if (!modal) {
+            modal = document.createElement('ai-generation-modal');
+            document.body.appendChild(modal);
+        }
+
+        const textarea = this.querySelector('#example-dialogs-text');
+        const currentContent = textarea ? textarea.value.trim() : '';
+
+        // Validate for edit mode
+        if (isEdit && !currentContent) {
+            alert('No content to edit. Please add some example dialogs first or use "Generate with AI" instead.');
+            return;
+        }
+
+        console.log('[Example Dialogs] Opening modal with type: exampleDialogs');
+        modal.open({
+            type: 'exampleDialogs',
+            characterData: characterData,
+            isEdit: isEdit,
+            currentContent: currentContent,
+            onInsert: (content) => {
+                if (textarea) {
+                    textarea.value = content;
+                    textarea.dispatchEvent(new Event('input'));
+                }
+            },
+            onAppend: (content) => {
+                if (textarea) {
+                    const current = textarea.value.trim();
+                    textarea.value = current ? `${current}\n\n${content}` : content;
+                    textarea.dispatchEvent(new Event('input'));
+                }
+            }
+        });
     }
 
     getData() {
-        const dialogs = [];
-        const dialogItems = this.querySelectorAll('.dialog-item');
-        
-        dialogItems.forEach(item => {
-            const index = parseInt(item.getAttribute('data-index'), 10);
-            const dialogTextarea = item.querySelector('.dialog-text');
-            const text = dialogTextarea ? dialogTextarea.value.trim() : '';
-            
-            // Only include if dialog has content
-            if (text) {
-                const dialog = this._dialogs[index] || { id: this._generateId() };
-                dialogs.push({
-                    id: dialog.id,
-                    text
-                });
-            }
-        });
-
-        return dialogs.length > 0 ? dialogs : [];
+        const textarea = this.querySelector('#example-dialogs-text');
+        return textarea ? textarea.value.trim() : '';
     }
 }
 

@@ -1,6 +1,10 @@
 # BotWaffle
 
-A desktop app built primarily for backing up and managing AI chatbot characters from **[JanitorAI](https://janitorai.com/)** — keeping your bots, their personalities, scenarios, and image prompts safe and organized locally. It also includes an integrated visual prompt builder (**PromptWaffle**) for composing image generation prompts and sending them directly to ComfyUI.
+A desktop app built primarily for backing up and managing AI chatbot characters from **[JanitorAI](https://janitorai.com/)** — keeping your bots, their personalities, scenarios, and image prompts safe and organized locally. 
+
+**New in v1.5.0:** AI-powered character generation via LM Studio integration! Generate complete characters, personalities, scenarios, and dialogue using local AI models with JanitorAI-optimized prompts.
+
+It also includes an integrated visual prompt builder (**PromptWaffle**) for composing image generation prompts and sending them directly to ComfyUI.
 
 > All data is stored 100% locally. Nothing leaves your machine.
 
@@ -34,6 +38,11 @@ A desktop app built primarily for backing up and managing AI chatbot characters 
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Your First Bot: A Walkthrough](#your-first-bot-a-walkthrough)
+- [AI-Powered Character Generation](#ai-powered-character-generation)
+  - [LM Studio Setup](#lm-studio-setup)
+  - [Generate with AI](#generate-with-ai)
+  - [Full Character Generator](#full-character-generator)
+  - [Custom Prompts](#custom-prompts)
 - [PromptWaffle: Building Image Prompts](#promptwaffle-building-image-prompts)
   - [Wildcard Studio](#wildcard-studio)
 - [ComfyUI Integration](#comfyui-integration)
@@ -47,6 +56,11 @@ A desktop app built primarily for backing up and managing AI chatbot characters 
 
 - **Node.js** v18 or higher — [nodejs.org](https://nodejs.org/) *(download the LTS version)*
 - **Git** — [git-scm.com](https://git-scm.com/downloads)
+
+### Optional (for AI Features)
+
+- **LM Studio** — [lmstudio.ai](https://lmstudio.ai/) *(for AI-powered character generation)*
+- **Qwen 3.5 9B model** — Recommended model (download through LM Studio)
 
 ---
 
@@ -131,6 +145,170 @@ Each character has dedicated sections in the left nav for storing related conten
 | **Saved Chats** | Logged conversations with this character |
 
 All of these are optional — fill in whichever are useful for your workflow.
+
+---
+
+## AI-Powered Character Generation
+
+BotWaffle integrates with **LM Studio** to provide AI-assisted character creation. Generate personalities, scenarios, initial messages, and example dialogues using local AI models — all with customizable prompts optimized for JanitorAI character creation.
+
+### LM Studio Setup
+
+BotWaffle connects to LM Studio's local API server to generate character content. Here's how to set it up:
+
+#### 1. Install LM Studio
+
+Download and install LM Studio from [lmstudio.ai](https://lmstudio.ai/)
+
+#### 2. Download a Model
+
+We **strongly recommend using Qwen 3.5 9B** — all default prompts in BotWaffle were designed and tested with this model.
+
+1. Open LM Studio
+2. Go to the **Search** tab (🔍)
+3. Search for: `Qwen/Qwen2.5-9B-Instruct-GGUF`
+4. Download the **Q4_K_M** quantization (good balance of quality and speed)
+
+> **Other models:** While you can use other models, the default prompts are optimized for Qwen 3.5 9B's instruction-following capabilities. Results may vary with other models.
+
+#### 3. Load the Model
+
+1. Go to the **Chat** tab in LM Studio
+2. Click **Select a model to load**
+3. Choose `Qwen2.5-9B-Instruct-GGUF`
+4. Click **Load Model**
+
+#### 4. Start the Local Server
+
+1. Go to the **Local Server** tab (🖥️) in LM Studio
+2. Make sure your model is loaded (you'll see it at the top)
+3. Click **Start Server**
+4. The server will start on `http://localhost:1234` by default
+
+> **Keep LM Studio running:** The server needs to stay active while you're using AI features in BotWaffle.
+
+#### 5. Configure BotWaffle
+
+1. In BotWaffle, click **AI Settings** in the left sidebar
+2. Verify the connection status shows **Connected** with a green indicator
+3. If needed, adjust the **Base URL** (default: `http://localhost:1234/v1`)
+4. Configure generation settings:
+   - **Temperature** (0.7 default) — Higher = more creative, Lower = more focused
+   - **Max Tokens** (2000 default) — Maximum length of generated content
+
+---
+
+### Generate with AI
+
+Each character section (Personality, Scenario, Initial Messages, Example Dialogs) has a **Generate with AI** button. Click it to open the AI generation modal.
+
+#### Using the Generation Modal
+
+1. **Tell the AI what you want** — Describe the character traits, style, tone, or specific details you want included
+2. **Select context** — Choose which existing sections to include as context (e.g., use Personality when generating Initial Messages)
+3. **Choose a prompt** — Select from default prompts or your custom saved prompts
+4. **Edit the system prompt** (optional) — Customize the instructions for this generation
+5. **Click Generate** — The AI will create content based on your instructions
+
+#### Generation Options
+
+After generation, you have several options:
+
+| Button | Action |
+|--------|--------|
+| **Insert** | Replace the current section content (warns before overwriting) |
+| **Append** | Add the generated content to the end of existing content |
+| **Regenerate** | Generate new content with the same settings |
+| **Cancel** | Discard and close |
+
+#### Personality Prompts
+
+For the **Personality** section, you can choose between different prompt types:
+
+- **Personality SFW** — Full character sheet structure without explicit content
+- **Personality NSFW** — Includes sexuality section for adult characters
+- **Personality (Legacy)** — Simpler, traditional personality format
+
+All personality prompts follow the **Janitor AI master character sheet structure** with sections for:
+- Setting, Identity, Backstory
+- Appearance, Personality & Emotional Wiring
+- Physical Presence, Voice
+- Sexuality (NSFW only)
+- Connections (NPC relationships)
+
+---
+
+### Full Character Generator
+
+The **Full Character Generator** creates an entire character from scratch in one workflow. Access it from the sidebar or the **Generate Full Character** button.
+
+#### How It Works
+
+1. **Describe your character** — Tell the AI what kind of character you want to create
+2. **Customize prompts** (optional) — Review and adjust the system prompts for each section
+3. **Click Generate** — The AI will create all sections in sequence:
+   - ✨ Personality
+   - 🌍 Scenario
+   - 💬 Initial Messages
+   - 🎭 Example Dialogs
+   - 📝 Profile Description
+   - 🏷️ Character Name
+   - 🔖 Tags
+   - 🆔 Internal Name
+
+Progress is shown with cute status messages as each section generates. The entire process takes 2-5 minutes depending on your hardware.
+
+#### After Generation
+
+Once complete, all sections are automatically filled in. You can:
+- Review and edit any section
+- Regenerate individual sections using **Generate with AI**
+- Add images and additional details
+- Save the character
+
+---
+
+### Custom Prompts
+
+You can create and save your own custom prompts for any generation type.
+
+#### Creating Custom Prompts
+
+1. Open any **Generate with AI** modal
+2. Edit the system prompt to your liking
+3. Click the **Save** icon (💾)
+4. Give your prompt a name
+5. It will appear in the prompt dropdown for future use
+
+#### Managing Prompts
+
+- **AI Settings** page shows all default prompts organized by type
+- Edit any prompt and click **Save Settings** to update
+- Use the **Reload from Files** button to reset to defaults
+- Custom prompts are saved separately and won't be overwritten
+
+#### File-Based Prompt System
+
+All default prompts are stored as editable `.txt` files in:
+
+```
+data/prompts/
+├── personality/
+│   ├── sfw.txt
+│   ├── nsfw.txt
+│   └── legacy.txt
+├── scenario/
+│   └── default.txt
+├── initial-messages/
+│   └── default.txt
+├── example-dialogs/
+│   └── default.txt
+└── [other types]/
+```
+
+You can edit these files directly with any text editor. Changes take effect after restarting BotWaffle or clicking **Reload from Files** in AI Settings.
+
+> **Tip:** Back up your custom prompts by copying the `data/prompts/` folder.
 
 ---
 
@@ -256,6 +434,13 @@ data/
 │       ├── saved-chats/
 │       └── image-prompts/
 ├── templates/                   # Saved layout templates
+├── prompts/                     # AI generation prompts
+│   ├── personality/
+│   ├── scenario/
+│   ├── initial-messages/
+│   └── example-dialogs/
+├── config/                      # Application settings
+│   └── lmstudio.json            # LM Studio configuration
 └── prompt-waffle/               # PromptWaffle data
     ├── snippets/
     ├── boards/

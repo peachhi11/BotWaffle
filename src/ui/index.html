@@ -14,7 +14,7 @@
                        style-src 'self' 'unsafe-inline'; 
                        img-src 'self' data: file:; 
                        font-src 'self' data:;
-                       connect-src 'self' https://unpkg.com;
+                       connect-src 'self' https://unpkg.com http://localhost:* http://127.0.0.1:*;
                        base-uri 'self';
                        form-action 'self';
                        frame-src 'self' file:;">
@@ -70,7 +70,22 @@
                 </div>
                 <ul class="nav-links">
                     <li class="nav-item">
-                        <a href="#" class="nav-link active">My Library</a>
+                        <a href="#" class="nav-link active" data-action="library">
+                            <i data-feather="book-open"></i>
+                            <span>My Library</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" data-action="settings">
+                            <i data-feather="cpu"></i>
+                            <span>AI Settings</span>
+                        </a>
+                    </li>
+                    <li class="nav-item lmstudio-status-item">
+                        <div class="lmstudio-status">
+                            <div class="connection-indicator status-unknown"></div>
+                            <span class="connection-status-text">LM Studio</span>
+                        </div>
                     </li>
                 </ul>
             </aside>
@@ -104,6 +119,11 @@
     <script src="components/chatbot-card.js"></script>
     <script src="components/chatbot-list.js"></script>
     <script src="components/personality-builder.js"></script>
+    
+    <!-- LM Studio Components (must load before sections that use them) -->
+    <script src="components/ai-generation-modal.js"></script>
+    <script src="components/full-character-generator.js"></script>
+    
     <script src="components/sections/section-base.js"></script>
     <script src="components/sections/section-profile.js"></script>
     <script src="components/sections/section-personality.js"></script>
@@ -122,6 +142,9 @@
     <script src="components/bot-saved-chats-view.js"></script>
     <script src="components/bot-image-prompts-view.js"></script>
     <script src="components/bot-bio-view.js"></script>
+
+    <!-- LM Studio Settings (loaded after other components) -->
+    <script src="components/lmstudio-settings.js"></script>
 
     <!-- Data Management -->
     <script src="components/data-management.js"></script>
