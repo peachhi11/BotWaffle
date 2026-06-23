@@ -9,6 +9,7 @@ const { getGenerationInstructions } = require('./prompts/lmstudio-prompts');
 const { info, error: logError } = require('./utils/logger');
 
 const DEFAULT_MODEL = LMStudioConfig.DEFAULT_MODEL || 'qwen/qwen3.5-9b';
+const QWEN_NON_THINKING_SWITCH = '/no_think';
 
 class LMStudioService {
     constructor() {
@@ -92,6 +93,10 @@ class LMStudioService {
         return /(?:^|[-_/])(embed|embedding|nomic)(?:[-_/]|$)/i.test(modelId || '');
     }
 
+    _isQwenModel(modelId) {
+        return /(?:^|[-_/])qwen/i.test(modelId || '') || /qwen/i.test(modelId || '');
+    }
+
     _pickDefaultGenerationModel(models = []) {
         const ids = models
             .map(model => model?.id)
@@ -121,6 +126,48 @@ class LMStudioService {
 
     _cleanGeneratedContent(value) {
         return typeof value === 'string' ? value.trim() : '';
+    }
+
+    _appendQwenNonThinkingSwitch(prompt) {
+        const content = typeof prompt === 'string' ? prompt : '';
+        if (content.includes(QWEN_NON_THINKING_SWITCH)) {
+            return content;
+        }
+        return `${content}\n\n${QWEN_NON_THINKING_SWITCH}`;
+    }
+
+    _buildRequestBody(model, systemPrompt, userPrompt, options = {}) {
+        const isQwenModel = this._isQwenModel(model);
+        const requestBody = {
+            model,
+            messages: [
+                { role: 'system', content: systemPrompt },
+                {
+                    role: 'user',
+                    content: isQwenModel
+                        ? this._appendQwenNonThinkingSwitch(userPrompt)
+                        : userPrompt
+                }
+            ],
+            temperature: options.temperature ?? this.config.temperature ?? 0.7,
+            max_tokens: options.maxTokens ?? this.config.maxTokens ?? 2000
+        };
+
+        if (isQwenModel) {
+            // Qwen recommends non-thinking sampling defaults for normal chat/generation.
+            // LM Studio supports top_p/top_k on the OpenAI-compatible chat endpoint.
+            requestBody.top_p = options.topP ?? 0.8;
+            requestBody.top_k = options.topK ?? 20;
+            requestBody.min_p = options.minP ?? 0.0;
+            requestBody.presence_penalty = options.presencePenalty ?? 1.5;
+            requestBody.repeat_penalty = options.repeatPenalty ?? 1.0;
+            requestBody.chat_template_kwargs = {
+                enable_thinking: false,
+                ...(options.chatTemplateKwargs || {})
+            };
+        }
+
+        return requestBody;
     }
 
     _isUsableGeneratedContent(content) {
@@ -405,20 +452,14 @@ class LMStudioService {
             // Create abort controller for cancellation support
             this.abortController = new AbortController();
 
-            const requestBody = {
-                model: await this._resolveGenerationModel(options.model || this.config.model),
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: options.temperature ?? this.config.temperature ?? 0.7,
-                max_tokens: options.maxTokens ?? this.config.maxTokens ?? 2000
-            };
+            const model = await this._resolveGenerationModel(options.model || this.config.model);
+            const requestBody = this._buildRequestBody(model, systemPrompt, userPrompt, options);
 
             info('[LMStudio] Sending generation request', { 
                 model: requestBody.model,
                 temperature: requestBody.temperature,
-                maxTokens: requestBody.max_tokens
+                maxTokens: requestBody.max_tokens,
+                qwenNonThinking: this._isQwenModel(requestBody.model)
             });
 
             const response = await fetch(`${this.config.baseUrl}/chat/completions`, {

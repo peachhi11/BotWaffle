@@ -551,7 +551,11 @@ class LMStudioSettings extends HTMLElement {
             
             if (statusSpan) {
                 if (result.success) {
-                    statusSpan.textContent = `✓ ${result.message}`;
+                    this.config = testConfig;
+                    const saved = await window.api.lmstudio.saveConfig(this.config);
+                    statusSpan.textContent = saved
+                        ? `✓ ${result.message} Settings saved.`
+                        : `✓ ${result.message} Save settings before generating.`;
                     statusSpan.className = 'status-success';
                     
                     // Reload models
