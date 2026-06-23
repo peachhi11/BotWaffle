@@ -86,6 +86,62 @@ class LMStudioService {
         return `HTTP ${response.status}: ${message || response.statusText}`;
     }
 
+    _cleanGeneratedContent(value) {
+        return typeof value === 'string' ? value.trim() : '';
+    }
+
+    _isUsableGeneratedContent(content) {
+        const cleaned = this._cleanGeneratedContent(content);
+        if (!cleaned || cleaned.includes('<|im_start|>')) {
+            return false;
+        }
+
+        const compact = cleaned.replace(/\s+/g, '');
+        if (!compact || !/[A-Za-z0-9]/.test(compact)) {
+            return false;
+        }
+
+        const alphanumericCount = compact.replace(/[^A-Za-z0-9]/g, '').length;
+        const alphanumericRatio = alphanumericCount / compact.length;
+        if (alphanumericRatio < 0.25) {
+            return false;
+        }
+
+        const roleMarkerCount = (cleaned.match(/\b(?:user|assistant|system):/gi) || []).length;
+        return roleMarkerCount <= 2;
+    }
+
+    _extractGeneratedContent(data, requestedModel) {
+        const choice = data.choices?.[0] || {};
+        const message = choice.message || {};
+        const content = this._cleanGeneratedContent(message.content);
+        if (content) {
+            return { content, source: 'content' };
+        }
+
+        const reasoningContent = this._cleanGeneratedContent(message.reasoning_content);
+        if (
+            reasoningContent &&
+            choice.finish_reason === 'stop' &&
+            this._isUsableGeneratedContent(reasoningContent)
+        ) {
+            return { content: reasoningContent, source: 'reasoning_content' };
+        }
+
+        const model = data.model || requestedModel || 'selected model';
+        let error = `LM Studio returned no final content for "${model}".`;
+
+        if (reasoningContent && choice.finish_reason === 'length') {
+            error += ' The model spent the whole response budget in reasoning output before producing a final answer. Select a non-reasoning chat model, reduce the prompt, or increase Max Tokens.';
+        } else if (reasoningContent) {
+            error += ' The model returned reasoning-only output that did not look like a usable final answer. Try a different chat model or adjust the model chat template in LM Studio.';
+        } else {
+            error += ' Try selecting a specific loaded chat model instead of Auto.';
+        }
+
+        return { content: '', source: null, error };
+    }
+
     /**
      * Test connection to LM Studio
      * @returns {Promise<{success: boolean, message: string, models?: Array}>}
@@ -359,23 +415,35 @@ class LMStudioService {
                 fullResponse: JSON.stringify(data).substring(0, 500)
             });
             
-            const content = data.choices?.[0]?.message?.content || '';
+            const extracted = this._extractGeneratedContent(data, requestBody.model);
 
-            if (!content) {
+            if (!extracted.content) {
+                const choice = data.choices?.[0] || {};
+                const message = choice.message || {};
                 logError('[LMStudio] Empty response from API', { 
-                    responseData: data,
-                    choices: data.choices 
+                    model: data.model || requestBody.model,
+                    finishReason: choice.finish_reason,
+                    contentLength: (message.content || '').length,
+                    reasoningContentLength: (message.reasoning_content || '').length,
+                    reasoningPreview: (message.reasoning_content || '').substring(0, 200)
                 });
-                throw new Error('No content in response. Is a model loaded in LM Studio?');
+                throw new Error(extracted.error);
+            }
+
+            if (extracted.source === 'reasoning_content') {
+                info('[LMStudio] Using reasoning_content fallback as generated content', {
+                    model: data.model || requestBody.model,
+                    contentLength: extracted.content.length
+                });
             }
 
             info('[LMStudio] Generation successful', { 
-                contentLength: content.length 
+                contentLength: extracted.content.length
             });
 
             return {
                 success: true,
-                content: content
+                content: extracted.content
             };
         } catch (error) {
             if (error.name === 'AbortError') {
