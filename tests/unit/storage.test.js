@@ -5,11 +5,6 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const {
-  initializeStorage,
-  getDataPath
-} = require('../../src/core/storage');
-const { createTestDir, cleanupTestDir } = require('../utils/test-helpers');
 
 // Mock Electron before requiring storage
 // Note: Can't use external variables in jest.mock factory, must require inside
@@ -18,6 +13,7 @@ jest.mock('electron', () => {
   const os = require('os');
   return {
     app: {
+      getAppPath: jest.fn(() => path.join(os.tmpdir(), `botwaffle-test-${process.pid}`)),
       getPath: jest.fn((name) => {
         if (name === 'userData') {
           return path.join(os.tmpdir(), `botwaffle-test-${Date.now()}`);
@@ -44,7 +40,13 @@ describe('Storage', () => {
     cleanupDirs.forEach(dir => {
       const resolvedDir = path.resolve(dir);
       const projectRoot = path.resolve(__dirname, '../..');
-      if (resolvedDir === projectRoot || resolvedDir === path.dirname(projectRoot)) {
+      const projectDataDir = path.join(projectRoot, 'data');
+      if (
+        resolvedDir === projectRoot ||
+        resolvedDir === path.dirname(projectRoot) ||
+        resolvedDir === projectDataDir ||
+        resolvedDir.startsWith(`${projectDataDir}${path.sep}`)
+      ) {
         throw new Error(`Refusing to clean unsafe test directory: ${resolvedDir}`);
       }
       if (fs.existsSync(resolvedDir)) {
