@@ -8,6 +8,8 @@ const LMStudioConfig = require('./lmstudio-config');
 const { getGenerationInstructions } = require('./prompts/lmstudio-prompts');
 const { info, error: logError } = require('./utils/logger');
 
+const DEFAULT_MODEL = LMStudioConfig.DEFAULT_MODEL || 'qwen/qwen3.5-9b';
+
 class LMStudioService {
     constructor() {
         this.configManager = new LMStudioConfig();
@@ -84,6 +86,37 @@ class LMStudioService {
         }
 
         return `HTTP ${response.status}: ${message || response.statusText}`;
+    }
+
+    _isEmbeddingModel(modelId) {
+        return /(?:^|[-_/])(embed|embedding|nomic)(?:[-_/]|$)/i.test(modelId || '');
+    }
+
+    _pickDefaultGenerationModel(models = []) {
+        const ids = models
+            .map(model => model?.id)
+            .filter(id => typeof id === 'string' && id.trim());
+
+        return ids.find(id => id === DEFAULT_MODEL) ||
+            ids.find(id => /qwen/i.test(id) && !this._isEmbeddingModel(id)) ||
+            ids.find(id => !this._isEmbeddingModel(id)) ||
+            DEFAULT_MODEL;
+    }
+
+    async _resolveGenerationModel(requestedModel) {
+        if (requestedModel && requestedModel !== 'auto') {
+            return requestedModel;
+        }
+
+        const models = await this.listModels();
+        const resolvedModel = this._pickDefaultGenerationModel(models);
+
+        info('[LMStudio] Resolved Auto model selection', {
+            requestedModel: requestedModel || 'auto',
+            resolvedModel
+        });
+
+        return resolvedModel;
     }
 
     _cleanGeneratedContent(value) {
@@ -373,7 +406,7 @@ class LMStudioService {
             this.abortController = new AbortController();
 
             const requestBody = {
-                model: options.model || this.config.model || 'auto',
+                model: await this._resolveGenerationModel(options.model || this.config.model),
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
@@ -403,7 +436,7 @@ class LMStudioService {
                     throw new Error('No model is loaded in LM Studio. Please:\n1. Open LM Studio\n2. Go to the Local Server tab\n3. Select and load a model\n4. Try again');
                 }
                 
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+                throw new Error(errorText);
             }
 
             const data = await response.json();

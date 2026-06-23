@@ -45,7 +45,7 @@ class LMStudioSettings extends HTMLElement {
             enabled: true,
             baseUrl: 'http://localhost:1234/v1',
             apiKey: '',
-            model: 'auto',
+            model: 'qwen/qwen3.5-9b',
             temperature: 0.7,
             maxTokens: 2000,
             prompts: {}
@@ -107,7 +107,7 @@ class LMStudioSettings extends HTMLElement {
                         <div class="form-group">
                             <label for="model">Model:</label>
                             <select id="model">
-                                <option value="auto" ${this.config.model === 'auto' ? 'selected' : ''}>Auto (use loaded model)</option>
+                                <option value="auto" ${this.config.model === 'auto' ? 'selected' : ''}>Auto (prefer Qwen 3.5 9B)</option>
                                 ${this.models.map(m => `
                                     <option value="${m.id}" ${this.config.model === m.id ? 'selected' : ''}>
                                         ${m.id}
@@ -560,7 +560,7 @@ class LMStudioSettings extends HTMLElement {
                     if (modelSelect) {
                         const currentValue = modelSelect.value;
                         modelSelect.innerHTML = `
-                            <option value="auto" ${currentValue === 'auto' ? 'selected' : ''}>Auto (use loaded model)</option>
+                            <option value="auto" ${currentValue === 'auto' ? 'selected' : ''}>Auto (prefer Qwen 3.5 9B)</option>
                             ${this.models.map(m => `
                                 <option value="${m.id}" ${currentValue === m.id ? 'selected' : ''}>
                                     ${m.id}

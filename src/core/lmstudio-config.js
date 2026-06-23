@@ -12,6 +12,7 @@ const { PromptManager } = require('./prompts/prompt-manager');
 const { info, error: logError } = require('./utils/logger');
 
 const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
+const DEFAULT_MODEL = 'qwen/qwen3.5-9b';
 
 function normalizeBaseUrl(baseUrl) {
     const rawUrl = typeof baseUrl === 'string' ? baseUrl.trim() : '';
@@ -60,7 +61,7 @@ class LMStudioConfig {
             enabled: true,
             baseUrl: DEFAULT_BASE_URL,
             apiKey: '',
-            model: 'auto',
+            model: DEFAULT_MODEL,
             temperature: 0.7,
             maxTokens: 2000,
             prompts: prompts
@@ -258,3 +259,4 @@ class LMStudioConfig {
 
 module.exports = LMStudioConfig;
 module.exports.normalizeBaseUrl = normalizeBaseUrl;
+module.exports.DEFAULT_MODEL = DEFAULT_MODEL;
