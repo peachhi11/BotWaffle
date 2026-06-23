@@ -289,7 +289,7 @@ class PromptKitUI {
     // Add click handler for dice button
     diceButton.addEventListener('click', (e) => {
       e.stopPropagation(); // Prevent category header click
-      this.rollWildcard(category, wildcard);
+      this.rollWildcard(category, wildcard, e);
     });
     
     // Create a horizontal controls row for the three elements
@@ -312,7 +312,7 @@ class PromptKitUI {
   /**
    * Roll a wildcard and add it to the prompt
    */
-  rollWildcard(category, wildcard) {
+  rollWildcard(category, wildcard, event) {
     try {
       const wildcardId = `${category.id}_${wildcard.id}`; // Use combination of category and wildcard ID
       
@@ -341,7 +341,7 @@ class PromptKitUI {
       this.updatePrompt();
       
       // Add some visual feedback to the dice button
-      const diceButton = event.target.closest('.dice-button');
+      const diceButton = event?.target.closest('.dice-button');
       if (diceButton) {
         diceButton.style.transform = 'scale(1.1)';
         setTimeout(() => {

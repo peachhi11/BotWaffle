@@ -270,6 +270,7 @@ export function cleanElement(element) {
 
   // Remove any inline event handlers
   const style = element.getAttribute('style');
+  // eslint-disable-next-line no-script-url -- This sanitizer removes script URLs from inline styles.
   if (style && style.includes('javascript:')) {
     element.removeAttribute('style');
   }

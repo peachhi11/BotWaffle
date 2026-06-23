@@ -124,6 +124,7 @@ function validateURL(url) {
     }
 
     // Check for javascript: URLs
+    // eslint-disable-next-line no-script-url -- This validator rejects script URLs instead of emitting them.
     if (url.startsWith('javascript:')) {
       return false;
     }
@@ -258,17 +259,12 @@ function logSecurityEvent(event, details = {}) {
  * @returns {Object} - Security statistics
  */
 function getSecurityStats() {
-  try {
-    // In main process, return basic stats
-    return { 
-      totalEvents: 0, 
-      eventsByType: {}, 
-      recentEvents: [] 
-    };
-  } catch (error) {
-    console.error('[Security] Error getting security stats:', error);
-    return { totalEvents: 0, eventsByType: {}, recentEvents: [] };
-  }
+  // In main process, return basic stats
+  return {
+    totalEvents: 0,
+    eventsByType: {},
+    recentEvents: []
+  };
 }
 
 module.exports = {

@@ -42,9 +42,14 @@ describe('Storage', () => {
   afterEach(() => {
     // Clean up test directories
     cleanupDirs.forEach(dir => {
-      if (fs.existsSync(dir)) {
+      const resolvedDir = path.resolve(dir);
+      const projectRoot = path.resolve(__dirname, '../..');
+      if (resolvedDir === projectRoot || resolvedDir === path.dirname(projectRoot)) {
+        throw new Error(`Refusing to clean unsafe test directory: ${resolvedDir}`);
+      }
+      if (fs.existsSync(resolvedDir)) {
         try {
-          fs.rmSync(dir, { recursive: true, force: true });
+          fs.rmSync(resolvedDir, { recursive: true, force: true });
         } catch (error) {
           // Ignore cleanup errors
         }
@@ -67,7 +72,7 @@ describe('Storage', () => {
       const chatbotsDir = path.dirname(dataDir);
       
       // Track for cleanup
-      cleanupDirs.push(path.dirname(chatbotsDir));
+      cleanupDirs.push(chatbotsDir);
       
       expect(fs.existsSync(chatbotsDir)).toBe(true);
       expect(fs.existsSync(dataDir)).toBe(true);
@@ -81,7 +86,7 @@ describe('Storage', () => {
       const subdirs = ['chatbots', 'conversations', 'templates', 'config', 'assets'];
       subdirs.forEach(subdir => {
         const dirPath = storage.getDataPath(subdir);
-        cleanupDirs.push(path.dirname(path.dirname(dirPath)));
+        cleanupDirs.push(path.dirname(dirPath));
         expect(fs.existsSync(dirPath)).toBe(true);
       });
     });

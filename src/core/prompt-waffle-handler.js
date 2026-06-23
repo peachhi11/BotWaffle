@@ -373,17 +373,9 @@ function registerPromptWaffleHandlers() {
     });
 
     // Image viewer handlers (no pw- prefix to match preload)
-    ipcMain.handle('open-image-viewer', async (event, imageData) => {
-        try {
-            // For now, just return success - full implementation would create a window
-            // This is a stub to prevent errors
-            return true;
-        } catch (error) {
-            try {
-                console.error('Error in open-image-viewer:', error);
-            } catch (e) {}
-            return false;
-        }
+    ipcMain.handle('open-image-viewer', async (_event, _imageData) => {
+        // This is a stub to prevent errors until the full image viewer is implemented.
+        return true;
     });
 
     ipcMain.handle('close-image-viewer', async () => {

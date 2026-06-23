@@ -1496,6 +1496,8 @@ ${prompt}
    * Generate a duplicate name with proper numbering
    */
   generateDuplicateName(originalName) {
+    const characterNameExists = name => this.characters.some(c => c.name === name);
+
     // Check if the name already ends with a number pattern
     const numberMatch = originalName.match(/^(.+?)(_(\d+))?$/);
     if (numberMatch) {
@@ -1507,7 +1509,7 @@ ${prompt}
       let newName = `${baseName}_${newNumber.toString().padStart(2, '0')}`;
       
       // Check if this name already exists
-      while (this.characters.some(c => c.name === newName)) {
+      while (characterNameExists(newName)) {
         newNumber++;
         newName = `${baseName}_${newNumber.toString().padStart(2, '0')}`;
       }
@@ -1520,7 +1522,7 @@ ${prompt}
     let counter = 1;
     
     // Check if this name already exists and increment if needed
-    while (this.characters.some(c => c.name === newName)) {
+    while (characterNameExists(newName)) {
       counter++;
       newName = `${originalName}_${counter.toString().padStart(2, '0')}`;
     }

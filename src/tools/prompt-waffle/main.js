@@ -1183,6 +1183,7 @@ ipcMain.handle('openExternal', async (event, url) => {
     }
 
     // Check for dangerous protocols
+    // eslint-disable-next-line no-script-url -- This branch rejects script URLs before opening external links.
     if (url.startsWith('data:') || url.startsWith('javascript:') || url.startsWith('file:')) {
       logSecurityEvent('dangerous_url_protocol', { url, operation: 'openExternal' });
       throw new Error('Dangerous URL protocol not allowed');

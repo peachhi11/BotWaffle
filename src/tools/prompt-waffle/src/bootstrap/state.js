@@ -427,7 +427,7 @@ export function restoreUIState() {
     const searchInput = document.getElementById('tagSearchInput');
     if (searchInput && uiState.searchTerm) {
       searchInput.value = uiState.searchTerm;
-      currentSearchTerm = uiState.searchTerm;
+      AppState.setCurrentSearchTerm(uiState.searchTerm);
     }
     // Restore current board
     if (uiState.currentBoardId) {
@@ -501,7 +501,7 @@ export function checkDataIntegrity() {
       return true;
     });
     if (validBoards.length !== boards.length) {
-      boards = validBoards;
+      AppState.setBoards(validBoards);
       scheduleAutosave();
     }
     return true;

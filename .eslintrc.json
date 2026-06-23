@@ -6,7 +6,7 @@
   },
   "extends": [
     "eslint:recommended",
-    "plugin:node/recommended",
+    "plugin:n/recommended",
     "prettier"
   ],
   "parserOptions": {
@@ -28,9 +28,9 @@
     "no-implied-eval": "error",
     "no-new-func": "error",
     "no-script-url": "error",
-    "node/no-unpublished-require": "off",
-    "node/no-missing-require": "off",
-    "node/no-extraneous-require": "off"
+    "n/no-unpublished-require": "off",
+    "n/no-missing-require": "off",
+    "n/no-extraneous-require": "off"
   },
   "ignorePatterns": [
     "node_modules/",

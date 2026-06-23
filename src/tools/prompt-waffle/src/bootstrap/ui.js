@@ -1303,7 +1303,7 @@ export function addImagePreviewToSidebar() {
   // This will be called during sidebar rendering
   document.querySelectorAll('.board-element').forEach(boardElement => {
     const boardId = boardElement.dataset.boardId;
-    const board = boards.find(b => b.id === boardId);
+    const board = AppState.getBoards().find(b => b.id === boardId);
     if (board && board.images && board.images.length > 0) {
       // Add image indicator
       const imageIndicator = document.createElement('span');
