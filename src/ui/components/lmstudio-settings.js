@@ -31,9 +31,9 @@ class LMStudioSettings extends HTMLElement {
         }
     }
 
-    async loadModels() {
+    async loadModels(config = null) {
         try {
-            this.models = await window.api.lmstudio.listModels();
+            this.models = await window.api.lmstudio.listModels(config);
         } catch (error) {
             console.error('[LM Studio Settings] Error loading models:', error);
             this.models = [];
@@ -44,10 +44,23 @@ class LMStudioSettings extends HTMLElement {
         return {
             enabled: true,
             baseUrl: 'http://localhost:1234/v1',
+            apiKey: '',
             model: 'auto',
             temperature: 0.7,
             maxTokens: 2000,
             prompts: {}
+        };
+    }
+
+    getFormConfig() {
+        return {
+            ...this.config,
+            enabled: this.querySelector('#enabled')?.checked ?? true,
+            baseUrl: this.querySelector('#base-url')?.value ?? 'http://localhost:1234/v1',
+            apiKey: this.querySelector('#api-key')?.value?.trim() ?? '',
+            model: this.querySelector('#model')?.value ?? 'auto',
+            temperature: parseFloat(this.querySelector('#temperature')?.value ?? 0.7),
+            maxTokens: parseInt(this.querySelector('#max-tokens')?.value ?? 2000)
         };
     }
 
@@ -82,6 +95,13 @@ class LMStudioSettings extends HTMLElement {
                             <input type="text" id="base-url" value="${this.config.baseUrl}" 
                                    placeholder="http://localhost:1234/v1">
                             <small>LM Studio API endpoint (default: http://localhost:1234/v1)</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="api-key">API Token:</label>
+                            <input type="password" id="api-key" value="${this.config.apiKey || ''}"
+                                   placeholder="Optional LM Studio API token" autocomplete="off">
+                            <small>Required when LM Studio server authentication is enabled</small>
                         </div>
 
                         <div class="form-group">
@@ -526,7 +546,8 @@ class LMStudioSettings extends HTMLElement {
         }
 
         try {
-            const result = await window.api.lmstudio.testConnection();
+            const testConfig = this.getFormConfig();
+            const result = await window.api.lmstudio.testConnection(testConfig);
             
             if (statusSpan) {
                 if (result.success) {
@@ -534,7 +555,7 @@ class LMStudioSettings extends HTMLElement {
                     statusSpan.className = 'status-success';
                     
                     // Reload models
-                    await this.loadModels();
+                    await this.loadModels(testConfig);
                     const modelSelect = this.querySelector('#model');
                     if (modelSelect) {
                         const currentValue = modelSelect.value;
@@ -579,19 +600,7 @@ class LMStudioSettings extends HTMLElement {
         }
 
         try {
-            // Collect form data
-            const enabled = this.querySelector('#enabled')?.checked ?? true;
-            const baseUrl = this.querySelector('#base-url')?.value ?? 'http://localhost:1234/v1';
-            const model = this.querySelector('#model')?.value ?? 'auto';
-            const temperature = parseFloat(this.querySelector('#temperature')?.value ?? 0.7);
-            const maxTokens = parseInt(this.querySelector('#max-tokens')?.value ?? 2000);
-
-            // Update config
-            this.config.enabled = enabled;
-            this.config.baseUrl = baseUrl;
-            this.config.model = model;
-            this.config.temperature = temperature;
-            this.config.maxTokens = maxTokens;
+            this.config = this.getFormConfig();
 
             // Save prompts to files
             if (this.config.prompts) {

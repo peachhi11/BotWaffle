@@ -201,7 +201,7 @@ app.whenReady().then(() => {
     }, { errorReturn: null });
 
     registerIpcHandler(ipcMain, 'lmstudio:save-config', async (_, config) => {
-        return await lmstudioService.configManager.save(config);
+        return await lmstudioService.saveConfig(config);
     }, { rethrow: true });
 
     registerIpcHandler(ipcMain, 'lmstudio:update-prompt', async (_, type, prompt) => {
@@ -212,12 +212,12 @@ app.whenReady().then(() => {
         return await lmstudioService.configManager.resetPrompt(type);
     }, { rethrow: true });
 
-    registerIpcHandler(ipcMain, 'lmstudio:test-connection', async () => {
-        return await lmstudioService.testConnection();
+    registerIpcHandler(ipcMain, 'lmstudio:test-connection', async (_, config) => {
+        return await lmstudioService.testConnection(config);
     }, { errorReturn: { success: false, message: 'Connection test failed' } });
 
-    registerIpcHandler(ipcMain, 'lmstudio:list-models', async () => {
-        return await lmstudioService.listModels();
+    registerIpcHandler(ipcMain, 'lmstudio:list-models', async (_, config) => {
+        return await lmstudioService.listModels(config);
     }, { errorReturn: [] });
 
     registerIpcHandler(ipcMain, 'lmstudio:generate', async (_, type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent) => {

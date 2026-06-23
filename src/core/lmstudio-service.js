@@ -23,33 +23,86 @@ class LMStudioService {
         this.config = await this.configManager.get();
     }
 
+    async saveConfig(config) {
+        const saved = await this.configManager.save(config);
+        if (saved) {
+            this.config = await this.configManager.get();
+        }
+        return saved;
+    }
+
     /**
      * Ensure config is loaded
      * @private
      */
-    async _ensureConfig() {
-        if (!this.config) {
+    async _ensureConfig(configOverride = null) {
+        if (configOverride) {
+            const currentConfig = this.config || await this.configManager.get();
+            this.config = {
+                ...currentConfig,
+                ...configOverride,
+                prompts: {
+                    ...(currentConfig.prompts || {}),
+                    ...(configOverride.prompts || {})
+                }
+            };
+            this.config.baseUrl = this.configManager.constructor.normalizeBaseUrl
+                ? this.configManager.constructor.normalizeBaseUrl(this.config.baseUrl)
+                : this.config.baseUrl;
+        } else if (!this.config) {
             await this.initialize();
         }
+    }
+
+    _getHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.config?.apiKey) {
+            headers.Authorization = `Bearer ${this.config.apiKey}`;
+        }
+        return headers;
+    }
+
+    async _formatHttpError(response) {
+        let message = response.statusText;
+
+        try {
+            const body = await response.text();
+            if (body) {
+                try {
+                    const parsed = JSON.parse(body);
+                    message = parsed.error?.message || parsed.message || body;
+                } catch {
+                    message = body;
+                }
+            }
+        } catch {
+            // Keep the status text fallback.
+        }
+
+        if (response.status === 401 && /api token|api key|bearer/i.test(message)) {
+            return 'HTTP 401: LM Studio API token required. Add the token in AI Settings or disable authentication in LM Studio.';
+        }
+
+        return `HTTP ${response.status}: ${message || response.statusText}`;
     }
 
     /**
      * Test connection to LM Studio
      * @returns {Promise<{success: boolean, message: string, models?: Array}>}
      */
-    async testConnection() {
+    async testConnection(configOverride = null) {
         try {
-            await this._ensureConfig();
+            await this._ensureConfig(configOverride);
             
             const response = await fetch(`${this.config.baseUrl}/models`, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this._getHeaders()
             });
 
             if (!response.ok) {
                 return {
                     success: false,
-                    message: `HTTP ${response.status}: ${response.statusText}`
+                    message: await this._formatHttpError(response)
                 };
             }
 
@@ -112,17 +165,17 @@ class LMStudioService {
      * List available models
      * @returns {Promise<Array>} Array of model objects
      */
-    async listModels() {
+    async listModels(configOverride = null) {
         try {
-            await this._ensureConfig();
+            await this._ensureConfig(configOverride);
             
             const response = await fetch(`${this.config.baseUrl}/models`, {
                 method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
+                headers: this._getHeaders()
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(await this._formatHttpError(response));
             }
 
             const data = await response.json();
@@ -281,13 +334,13 @@ class LMStudioService {
 
             const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: this._getHeaders(),
                 body: JSON.stringify(requestBody),
                 signal: this.abortController.signal
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
+                const errorText = await this._formatHttpError(response);
                 
                 // Check for specific "no models loaded" error
                 if (errorText.includes('No models loaded') || errorText.includes('no model loaded')) {

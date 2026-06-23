@@ -11,6 +11,30 @@ const { DEFAULT_PROMPTS } = require('./prompts/lmstudio-prompts');
 const { PromptManager } = require('./prompts/prompt-manager');
 const { info, error: logError } = require('./utils/logger');
 
+const DEFAULT_BASE_URL = 'http://localhost:1234/v1';
+
+function normalizeBaseUrl(baseUrl) {
+    const rawUrl = typeof baseUrl === 'string' ? baseUrl.trim() : '';
+    if (!rawUrl) {
+        return DEFAULT_BASE_URL;
+    }
+
+    try {
+        const url = new URL(rawUrl);
+        url.hash = '';
+        url.search = '';
+
+        if (!url.pathname || url.pathname === '/') {
+            url.pathname = '/v1';
+        }
+
+        url.pathname = url.pathname.replace(/\/+$/, '');
+        return url.toString().replace(/\/+$/, '');
+    } catch {
+        return rawUrl.replace(/\/+$/, '');
+    }
+}
+
 class LMStudioConfig {
     constructor() {
         this.configPath = path.join(getDataPath('config'), 'lmstudio.json');
@@ -34,7 +58,8 @@ class LMStudioConfig {
         
         return {
             enabled: true,
-            baseUrl: 'http://localhost:1234/v1',
+            baseUrl: DEFAULT_BASE_URL,
+            apiKey: '',
             model: 'auto',
             temperature: 0.7,
             maxTokens: 2000,
@@ -65,6 +90,7 @@ class LMStudioConfig {
                         ...(this.config.prompts || {})
                     }
                 };
+                this.config.baseUrl = normalizeBaseUrl(this.config.baseUrl);
                 
                 info('[LMStudio Config] Loaded configuration');
                 return this.config;
@@ -96,6 +122,8 @@ class LMStudioConfig {
             if (!this.config) {
                 throw new Error('No configuration to save');
             }
+
+            this.config.baseUrl = normalizeBaseUrl(this.config.baseUrl);
 
             // Ensure config directory exists
             const configDir = path.dirname(this.configPath);
@@ -229,3 +257,4 @@ class LMStudioConfig {
 }
 
 module.exports = LMStudioConfig;
+module.exports.normalizeBaseUrl = normalizeBaseUrl;

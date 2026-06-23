@@ -50,8 +50,8 @@ contextBridge.exposeInMainWorld('api', {
         saveConfig: (config) => ipcRenderer.invoke('lmstudio:save-config', config),
         updatePrompt: (type, prompt) => ipcRenderer.invoke('lmstudio:update-prompt', type, prompt),
         resetPrompt: (type) => ipcRenderer.invoke('lmstudio:reset-prompt', type),
-        testConnection: () => ipcRenderer.invoke('lmstudio:test-connection'),
-        listModels: () => ipcRenderer.invoke('lmstudio:list-models'),
+        testConnection: (config) => ipcRenderer.invoke('lmstudio:test-connection', config),
+        listModels: (config) => ipcRenderer.invoke('lmstudio:list-models', config),
         generate: (type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent) => 
             ipcRenderer.invoke('lmstudio:generate', type, characterData, selectedSections, additionalInput, customSystemPrompt, isEdit, currentContent),
         cancel: () => ipcRenderer.invoke('lmstudio:cancel'),
