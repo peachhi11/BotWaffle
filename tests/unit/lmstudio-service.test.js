@@ -44,6 +44,7 @@ describe('LMStudioService', () => {
     );
 
     expect(requestBody.messages[1].content).toContain('/no_think');
+    expect(requestBody.max_tokens).toBe(8192);
     expect(requestBody.top_p).toBe(0.8);
     expect(requestBody.top_k).toBe(20);
     expect(requestBody.min_p).toBe(0);
@@ -77,6 +78,7 @@ describe('LMStudioService', () => {
     const request = JSON.parse(global.fetch.mock.calls[0][1].body);
     expect(request.model).toBe('qwen/qwen3.5-9b');
     expect(request.messages[1].content).toContain('/no_think');
+    expect(request.max_tokens).toBe(8192);
     expect(request.top_p).toBe(0.8);
     expect(request.top_k).toBe(20);
     expect(request.min_p).toBe(0);

@@ -10,6 +10,7 @@ const { info, error: logError } = require('./utils/logger');
 
 const DEFAULT_MODEL = LMStudioConfig.DEFAULT_MODEL || 'qwen/qwen3.5-9b';
 const QWEN_NON_THINKING_SWITCH = '/no_think';
+const QWEN_MIN_MAX_TOKENS = 8192;
 
 class LMStudioService {
     constructor() {
@@ -138,6 +139,10 @@ class LMStudioService {
 
     _buildRequestBody(model, systemPrompt, userPrompt, options = {}) {
         const isQwenModel = this._isQwenModel(model);
+        const configuredMaxTokens = options.maxTokens ?? this.config.maxTokens ?? 2000;
+        const maxTokens = isQwenModel
+            ? Math.max(configuredMaxTokens, options.qwenMinMaxTokens ?? QWEN_MIN_MAX_TOKENS)
+            : configuredMaxTokens;
         const requestBody = {
             model,
             messages: [
@@ -150,7 +155,7 @@ class LMStudioService {
                 }
             ],
             temperature: options.temperature ?? this.config.temperature ?? 0.7,
-            max_tokens: options.maxTokens ?? this.config.maxTokens ?? 2000
+            max_tokens: maxTokens
         };
 
         if (isQwenModel) {
